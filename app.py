@@ -6,19 +6,18 @@ import datetime
 from typing import Dict, List
 
 import jwt
+import bcrypt
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from passlib.context import CryptContext
 from groq import Groq
 
 API_KEY = os.environ.get("GROQ_API_KEY")
 if not API_KEY:
     raise RuntimeError("Set the GROQ_API_KEY environment variable before running this server.")
 
-# IMPORTANT: set this to a long random string as an environment variable in production (JWT_SECRET).
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-only-secret-change-me")
 
 MODEL = "openai/gpt-oss-20b"
@@ -34,11 +33,7 @@ HISTORY_FILE = "conversations.json"
 DB_FILE = "users.db"
 
 client = Groq(api_key=API_KEY)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# ---------------------------------------------------------------------------
-# User database (SQLite)
-# ---------------------------------------------------------------------------
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -65,7 +60,7 @@ def get_user_by_username(username: str):
 
 def create_user(username: str, password: str) -> str:
     user_id = str(uuid.uuid4())
-    password_hash = pwd_context.hash(password)
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     conn = sqlite3.connect(DB_FILE)
     conn.execute(
         "INSERT INTO users (id, username, password_hash) VALUES (?, ?, ?)",
@@ -94,10 +89,6 @@ def get_current_user_id(authorization: str = Header(None)) -> str:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return payload["user_id"]
 
-
-# ---------------------------------------------------------------------------
-# Conversation storage: { user_id: { session_id: [messages] } }
-# ---------------------------------------------------------------------------
 
 def load_conversations() -> Dict[str, Dict[str, List[dict]]]:
     if os.path.exists(HISTORY_FILE):
@@ -128,10 +119,6 @@ class ChatRequest(BaseModel):
     image: str | None = None
 
 
-# ---------------------------------------------------------------------------
-# Auth endpoints
-# ---------------------------------------------------------------------------
-
 @app.post("/signup")
 def signup(req: AuthRequest):
     if len(req.username) < 3 or len(req.password) < 6:
@@ -148,7 +135,7 @@ def signup(req: AuthRequest):
 @app.post("/login")
 def login(req: AuthRequest):
     row = get_user_by_username(req.username)
-    if not row or not pwd_context.verify(req.password, row[2]):
+    if not row or not bcrypt.checkpw(req.password.encode("utf-8"), row[2].encode("utf-8")):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     user_id = row[0]
     if user_id not in conversations:
@@ -157,10 +144,6 @@ def login(req: AuthRequest):
     token = make_token(user_id)
     return {"token": token, "username": req.username}
 
-
-# ---------------------------------------------------------------------------
-# Chat endpoints (all require login now)
-# ---------------------------------------------------------------------------
 
 @app.post("/session")
 def new_session(user_id: str = Depends(get_current_user_id)):
