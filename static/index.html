@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title> S A G E </title>
+<title> SAGE </title>
+   <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <style>
-  :root {
-    --bg: #343541;
-    --sidebar: #202123;
-    --panel: #444654;
-    --text: #ececf1;
-    --accent: #10a37f;
-    --border: #565869;
-  }
+    :root {
+     --bg: #0f1f33;
+     --sidebar: #0a1526;
+     --panel: #16304d;
+     --text: #e8f0fa;
+     --accent: #5b9bd5;
+     --border: #24405e;
+   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
@@ -214,8 +215,15 @@
     </div>
     <div id="main">
       <header>
-   <h1>Nova</h1>
-           <span id="welcome-user" style="font-size:12px;opacity:0.7;"></span>
+      <header style="display:flex; align-items:center; gap:10px;">
+     <img src="/static/logo.svg" alt="Sage logo" style="width:28px; height:28px;" />
+        <header>
+     <div style="display:flex; align-items:center; gap:10px;">
+       <img src="/static/logo.svg" alt="Sage logo" style="width:28px; height:28px;" />
+       <h1>Sage</h1>
+     </div>
+     <span id="welcome-user" style="font-size:12px;opacity:0.7;"></span>
+   </header>
       </header>
       <div id="chat"></div>
       <div id="welcome-title">What can I help with?</div>
