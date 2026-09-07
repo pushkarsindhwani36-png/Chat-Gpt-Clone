@@ -18,6 +18,7 @@ API_KEY = os.environ.get("GROQ_API_KEY")
 if not API_KEY:
     raise RuntimeError("Set the GROQ_API_KEY environment variable before running this server.")
 
+# IMPORTANT: set this to a long random string as an environment variable in production (JWT_SECRET).
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-only-secret-change-me")
 
 MODEL = "openai/gpt-oss-20b"
@@ -34,6 +35,9 @@ DB_FILE = "users.db"
 
 client = Groq(api_key=API_KEY)
 
+# ---------------------------------------------------------------------------
+# User database (SQLite)
+# ---------------------------------------------------------------------------
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -90,6 +94,10 @@ def get_current_user_id(authorization: str = Header(None)) -> str:
     return payload["user_id"]
 
 
+# ---------------------------------------------------------------------------
+# Conversation storage: { user_id: { session_id: [messages] } }
+# ---------------------------------------------------------------------------
+
 def load_conversations() -> Dict[str, Dict[str, List[dict]]]:
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
@@ -119,6 +127,10 @@ class ChatRequest(BaseModel):
     image: str | None = None
 
 
+# ---------------------------------------------------------------------------
+# Auth endpoints
+# ---------------------------------------------------------------------------
+
 @app.post("/signup")
 def signup(req: AuthRequest):
     if len(req.username) < 3 or len(req.password) < 6:
@@ -145,6 +157,10 @@ def login(req: AuthRequest):
     return {"token": token, "username": req.username}
 
 
+# ---------------------------------------------------------------------------
+# Chat endpoints (all require login now)
+# ---------------------------------------------------------------------------
+
 @app.post("/session")
 def new_session(user_id: str = Depends(get_current_user_id)):
     session_id = str(uuid.uuid4())
@@ -157,7 +173,7 @@ def new_session(user_id: str = Depends(get_current_user_id)):
 def list_sessions(user_id: str = Depends(get_current_user_id)):
     user_convos = conversations.get(user_id, {})
     return [
-        {"session_id": sid, "preview": (msgs[0]["content"][:50] if msgs else "New chat")}
+        {"session_id": sid, "preview": (msgs[-1]["content"][:50] if msgs else "New chat")}
         for sid, msgs in user_convos.items()
     ]
 
@@ -189,6 +205,7 @@ def chat(req: ChatRequest, user_id: str = Depends(get_current_user_id)):
 
     history = user_convos[session_id]
 
+    # ---- Vision request (an image was attached) ----
     if req.image:
         history.append({"role": "user", "content": req.message or "[sent an image]"})
         save_conversations()
@@ -220,6 +237,7 @@ def chat(req: ChatRequest, user_id: str = Depends(get_current_user_id)):
 
         return StreamingResponse(vision_stream(), media_type="text/event-stream")
 
+    # ---- Normal text chat ----
     history.append({"role": "user", "content": req.message})
     save_conversations()
 

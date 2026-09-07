@@ -158,6 +158,26 @@
   .msg .content p:last-child { margin-bottom: 0; }
   .msg img { max-width: 400px; border-radius: 8px; display: block; margin-top: 6px; }
   #input-bar { padding: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; }
+  #main.empty-chat {
+    justify-content: center;
+  }
+  #main.empty-chat #chat {
+    display: none;
+  }
+  #main.empty-chat #input-bar {
+    border-top: none;
+  }
+  #main.empty-chat #welcome-title {
+    display: block;
+  }
+  #welcome-title {
+    display: none;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    opacity: 0.9;
+  }
   #hint { max-width: 700px; margin: 0 auto 6px auto; font-size: 12px; opacity: 0.5; }
   #input-inner { width: 100%; max-width: 700px; display: flex; gap: 8px; }
   #input-inner textarea {
@@ -198,6 +218,7 @@
         <span id="welcome-user" style="font-size:12px;opacity:0.7;"></span>
       </header>
       <div id="chat"></div>
+      <div id="welcome-title">What can I help with?</div>
       <div id="input-bar">
         <div id="hint">Tip: type <code>/image a description</code> to generate a picture</div>
         <div id="input-inner">
@@ -323,15 +344,17 @@ async function refreshSessionList() {
     const delBtn = document.createElement("button");
     delBtn.className = "delete-btn";
     delBtn.textContent = "×";
-       delBtn.onclick = async (e) => {
-     e.stopPropagation();
-     await fetch(`/session/${s.session_id}`, { method: "DELETE", headers: authHeaders() });
-     if (s.session_id === sessionId) {
-       startSession();
-     } else {
-       refreshSessionList();
-     }
-   };
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm("Delete this chat?")) return;
+      await fetch(`/session/${s.session_id}`, { method: "DELETE", headers: authHeaders() });
+      if (s.session_id === sessionId) {
+        startSession();
+      } else {
+        refreshSessionList();
+      }
+    };
+
     div.appendChild(label);
     div.appendChild(delBtn);
     sessionListEl.appendChild(div);
@@ -343,6 +366,12 @@ async function loadSession(id) {
   chatEl.innerHTML = "";
   const res = await fetch(`/history/${id}`, { headers: authHeaders() });
   const messages = await res.json();
+  const mainEl = document.getElementById("main");
+  if (messages.length === 0) {
+    mainEl.classList.add("empty-chat");
+  } else {
+    mainEl.classList.remove("empty-chat");
+  }
   messages.forEach(m => addMessage(m.role, m.content));
   refreshSessionList();
 }
@@ -352,6 +381,7 @@ async function startSession() {
   const data = await res.json();
   sessionId = data.session_id;
   chatEl.innerHTML = "";
+  document.getElementById("main").classList.add("empty-chat");
   refreshSessionList();
 }
 
@@ -393,6 +423,7 @@ async function sendMessage() {
   inputEl.value = "";
   sendBtn.disabled = true;
 
+  document.getElementById("main").classList.remove("empty-chat");
   addMessage("user", text);
 
   if (text.toLowerCase().startsWith("/image ")) {
