@@ -323,17 +323,15 @@ async function refreshSessionList() {
     const delBtn = document.createElement("button");
     delBtn.className = "delete-btn";
     delBtn.textContent = "×";
-    delBtn.onclick = async (e) => {
-      e.stopPropagation();
-      if (!confirm("Delete this chat?")) return;
-      await fetch(`/session/${s.session_id}`, { method: "DELETE", headers: authHeaders() });
-      if (s.session_id === sessionId) {
-        startSession();
-      } else {
-        refreshSessionList();
-      }
-    };
-
+       delBtn.onclick = async (e) => {
+     e.stopPropagation();
+     await fetch(`/session/${s.session_id}`, { method: "DELETE", headers: authHeaders() });
+     if (s.session_id === sessionId) {
+       startSession();
+     } else {
+       refreshSessionList();
+     }
+   };
     div.appendChild(label);
     div.appendChild(delBtn);
     sessionListEl.appendChild(div);
