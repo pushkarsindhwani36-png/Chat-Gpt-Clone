@@ -2,3 +2,5 @@
    uvicorn
    groq
    pydantic
+   passlib[bcrypt]
+   pyjwt
