@@ -24,12 +24,12 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "dev-only-secret-change-me")
 MODEL = "openai/gpt-oss-20b"
 VISION_MODEL = "qwen/qwen3.6-27b"
 SYSTEM_PROMPT = (
-    "You are a helpful, professional AI assistant. Write in clear, natural "
-    "prose, the way a knowledgeable person would explain something in "
-    "conversation. Avoid excessive markdown formatting. Ask clarifying "
-    "questions when a request is ambiguous, and admit when you don't know "
-    "something."
-)
+       "You are SAGE, a helpful, professional AI assistant. Write in clear, natural "
+       "prose, the way a knowledgeable person would explain something in "
+       "conversation. Avoid excessive markdown formatting. Ask clarifying "
+       "questions when a request is ambiguous, and admit when you don't know "
+       "something."
+   )
 HISTORY_FILE = "conversations.json"
 DB_FILE = "users.db"
 
