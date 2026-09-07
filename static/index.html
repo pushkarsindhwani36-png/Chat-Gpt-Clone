@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <title>My AI Agent</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <style>
   :root {
     --bg: #343541;
@@ -135,6 +137,25 @@
   }
   .msg.assistant { background: var(--panel); }
   .msg .role { font-weight: 600; font-size: 12px; opacity: 0.6; margin-bottom: 4px; }
+  .msg .content pre {
+    background: #1e1e1e;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  .msg .content code {
+    background: #1e1e1e;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "Consolas", "Monaco", monospace;
+  }
+  .msg .content pre code { background: none; padding: 0; }
+  .msg .content ul, .msg .content ol { margin: 8px 0; padding-left: 24px; }
+  .msg .content p { margin: 8px 0; }
+  .msg .content p:first-child { margin-top: 0; }
+  .msg .content p:last-child { margin-bottom: 0; }
   .msg img { max-width: 400px; border-radius: 8px; display: block; margin-top: 6px; }
   #input-bar { padding: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; }
   #hint { max-width: 700px; margin: 0 auto 6px auto; font-size: 12px; opacity: 0.5; }
@@ -336,14 +357,25 @@ async function startSession() {
   refreshSessionList();
 }
 
+function renderMarkdown(el, rawText) {
+  if (el.dataset.role === "user") {
+    el.textContent = rawText; // user messages stay as plain text
+  } else {
+    el.innerHTML = DOMPurify.sanitize(marked.parse(rawText));
+  }
+}
+
 function addMessage(role, text) {
   const div = document.createElement("div");
   div.className = `msg ${role}`;
   div.innerHTML = `<div class="role">${role === "user" ? "You" : "Assistant"}</div><div class="content"></div>`;
-  div.querySelector(".content").textContent = text;
+  const contentEl = div.querySelector(".content");
+  contentEl.dataset.role = role;
+  contentEl.dataset.raw = text;
+  renderMarkdown(contentEl, text);
   chatEl.appendChild(div);
   chatEl.scrollTop = chatEl.scrollHeight;
-  return div.querySelector(".content");
+  return contentEl;
 }
 
 function addImage(url) {
@@ -403,7 +435,8 @@ async function sendMessage() {
       if (part.startsWith("data: ")) {
         const chunk = part.slice(6);
         if (chunk === "[DONE]") continue;
-        assistantContentEl.textContent += chunk;
+        assistantContentEl.dataset.raw = (assistantContentEl.dataset.raw || "") + chunk;
+        renderMarkdown(assistantContentEl, assistantContentEl.dataset.raw);
         chatEl.scrollTop = chatEl.scrollHeight;
       }
     }
